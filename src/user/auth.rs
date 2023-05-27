@@ -312,7 +312,7 @@ impl<'a> Auth<'a> {
     #[throws(Error)]
     pub async fn compare_password(&self, password: &str) -> bool {
         if self.is_auth().await {
-            let session = self.get_session()?; 
+            let session = self.get_session()?;
             let user: User = self.users.get_by_id(session.id()?).await?;
             user.compare_password(password)?
         } else {
