@@ -24,13 +24,13 @@ pub(crate) const SELECT_BY_ID: &str = "
 SELECT * FROM users WHERE id = $1;
 ";
 
-pub(crate) const SELECT_BY_EMAIL: &str = "
+pub(crate) const SELECT_BY_IDENT: &str = "
 SELECT * FROM users WHERE email = $1;
 ";
 
 pub(crate) const REMOVE_BY_ID: &str = "
 DELETE FROM users WHERE id =$1;
 ";
-pub(crate) const REMOVE_BY_EMAIL: &str = "
+pub(crate) const REMOVE_BY_IDENT: &str = "
 DELETE FROM users WHERE email =$1;
 ";

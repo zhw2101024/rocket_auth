@@ -13,6 +13,7 @@ impl DBConnection for Client {
             .await?;
         Ok(())
     }
+    #[cfg(feature = "ident-email")]
     async fn update_user(&self, user: &User) -> Result {
         self.execute(
             sql::UPDATE_USER,
@@ -21,12 +22,21 @@ impl DBConnection for Client {
         .await?;
         Ok(())
     }
+    #[cfg(feature = "ident-username")]
+    async fn update_user(&self, user: &User) -> Result {
+        self.execute(
+            sql::UPDATE_USER,
+            &[&user.username, &user.password, &user.is_admin],
+        )
+        .await?;
+        Ok(())
+    }
     async fn delete_user_by_id(&self, user_id: i32) -> Result {
         self.execute(sql::REMOVE_BY_ID, &[&user_id]).await?;
         Ok(())
     }
-    async fn delete_user_by_email(&self, email: &str) -> Result {
-        self.execute(sql::REMOVE_BY_EMAIL, &[&email]).await?;
+    async fn delete_user_by_ident(&self, ident: &str) -> Result {
+        self.execute(sql::REMOVE_BY_IDENT, &[&ident]).await?;
         Ok(())
     }
     async fn get_user_by_id(&self, user_id: i32) -> Result<User> {
@@ -34,8 +44,8 @@ impl DBConnection for Client {
         user.try_into()
     }
 
-    async fn get_user_by_email(&self, email: &str) -> Result<User> {
-        let user = self.query_one(sql::SELECT_BY_EMAIL, &[&email]).await?;
+    async fn get_user_by_ident(&self, ident: &str) -> Result<User> {
+        let user = self.query_one(sql::SELECT_BY_IDENT, &[&ident]).await?;
         user.try_into()
     }
 }
@@ -43,10 +53,21 @@ impl DBConnection for Client {
 impl TryFrom<tokio_postgres::Row> for User {
     type Error = Error;
     #[throws(Error)]
+    #[cfg(feature = "ident-email")]
     fn try_from(row: tokio_postgres::Row) -> User {
         User {
             id: row.get(0),
             email: row.get(1),
+            password: row.get(2),
+            is_admin: row.get(3),
+        }
+    }
+    #[throws(Error)]
+    #[cfg(feature = "ident-username")]
+    fn try_from(row: tokio_postgres::Row) -> User {
+        User {
+            id: row.get(0),
+            username: row.get(1),
             password: row.get(2),
             is_admin: row.get(3),
         }

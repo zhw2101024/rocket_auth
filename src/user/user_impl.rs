@@ -65,8 +65,13 @@ impl User {
     ///     format!("Your user_id is: {}", user.email())
     /// }
     /// ```
+    #[cfg(feature = "ident-email")]
     pub fn email(&self) -> &str {
         &self.email
+    }
+    #[cfg(feature = "ident-username")]
+    pub fn username(&self) -> &str {
+        &self.username
     }
 
     /// This functions allows to easily modify the email of a user.
@@ -84,6 +89,7 @@ impl User {
     /// }
     /// ```
     #[throws(Error)]
+    #[cfg(feature = "ident-email")]
     pub fn set_email(&mut self, email: &str) {
         if validator::validate_email(email) {
             self.email = email.to_lowercase();
@@ -91,16 +97,36 @@ impl User {
             throw!(Error::InvalidEmailAddressError)
         }
     }
+    #[throws(Error)]
+    #[cfg(feature = "ident-username")]
+    pub fn set_username(&mut self, username: &str) {
+        if validator::validate_length(username, Some(3), Some(8), Some(8)) {
+            self.username = username.to_lowercase();
+        } else {
+            throw!(Error::InvalidUsernameError)
+        }
+    }
 }
 
 use std::fmt::{self, Debug};
 
+#[cfg(feature = "ident-email")]
 impl Debug for User {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
             "User {{ id: {:?}, email: {:?}, is_admin: {:?}, password: \"*****\" }}",
             self.id, self.email, self.is_admin
+        )
+    }
+}
+#[cfg(feature = "ident-username")]
+impl Debug for User {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "User {{ id: {:?}, username: {:?}, is_admin: {:?}, password: \"*****\" }}",
+            self.id, self.username, self.is_admin
         )
     }
 }

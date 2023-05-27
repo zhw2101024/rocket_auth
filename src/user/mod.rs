@@ -27,11 +27,18 @@ impl Users {
     #[throws(Error)]
     async fn login(&self, form: &Login) -> String {
         let form_pwd = &form.password.as_bytes();
+        #[cfg(feature = "ident-email")]
         let user = self
             .conn
-            .get_user_by_email(&form.email.to_lowercase())
+            .get_user_by_ident(&form.email.to_lowercase())
             .await
             .map_err(|_| Error::EmailDoesNotExist(form.email.clone()))?;
+        #[cfg(feature = "ident-username")]
+        let user = self
+            .conn
+            .get_user_by_ident(&form.username.to_lowercase())
+            .await
+            .map_err(|_| Error::UsernameDoesNotExist(form.username.clone()))?;
         let user_pwd = &user.password;
         if verify(user_pwd, form_pwd)? {
             self.set_auth_key(user.id).await?
@@ -61,6 +68,7 @@ impl Users {
     }
 
     #[throws(Error)]
+    #[cfg(feature = "ident-email")]
     async fn signup(&self, form: &Signup) {
         form.validate()?;
         let email = &form.email.to_lowercase();
@@ -83,11 +91,50 @@ impl Users {
     }
 
     #[throws(Error)]
+    #[cfg(feature = "ident-username")]
+    async fn signup(&self, form: &Signup) {
+        form.validate()?;
+        let username = &form.username.to_lowercase();
+        let password = &form.password;
+        let result = self.create_user(username, password, false).await;
+        match result {
+            Ok(_) => (),
+            #[cfg(feature = "sqlx")]
+            Err(Error::SqlxError(sqlx::Error::Database(error))) => {
+                if error.code() == Some("23000".into()) {
+                    throw!(Error::UsernameAlreadyExists)
+                } else {
+                    throw!(Error::SqlxError(sqlx::Error::Database(error)))
+                }
+            }
+            Err(error) => {
+                throw!(error)
+            }
+        }
+    }
+
+    #[throws(Error)]
+    #[cfg(feature = "ident-email")]
     async fn login_for(&self, form: &Login, time: Duration) -> String {
         let form_pwd = &form.password.as_bytes();
         let user = self
             .conn
-            .get_user_by_email(&form.email.to_lowercase())
+            .get_user_by_ident(&form.email.to_lowercase())
+            .await?;
+        let user_pwd = &user.password;
+        if verify(user_pwd, form_pwd)? {
+            self.set_auth_key_for(user.id, time).await?
+        } else {
+            throw!(Error::UnauthorizedError)
+        }
+    }
+    #[throws(Error)]
+    #[cfg(feature = "ident-username")]
+    async fn login_for(&self, form: &Login, time: Duration) -> String {
+        let form_pwd = &form.password.as_bytes();
+        let user = self
+            .conn
+            .get_user_by_ident(&form.username.to_lowercase())
             .await?;
         let user_pwd = &user.password;
         if verify(user_pwd, form_pwd)? {

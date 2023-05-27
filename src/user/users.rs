@@ -160,13 +160,13 @@ impl Users {
     /// #[get("/user-information/<email>")]
     /// async fn user_information(email: String, users: &State<Users>) -> Result<String, Error> {
     ///        
-    ///     let user = users.get_by_email(&email).await?;
+    ///     let user = users.get_by_ident(&email).await?;
     ///     Ok(format!("{:?}", user))
     /// }
     /// ```
     #[throws(Error)]
-    pub async fn get_by_email(&self, email: &str) -> User {
-        self.conn.get_user_by_email(email).await?
+    pub async fn get_by_ident(&self, ident: &str) -> User {
+        self.conn.get_user_by_ident(ident).await?
     }
 
     /// It queries a user by their email.
@@ -227,7 +227,10 @@ impl Users {
     /// # use rocket_auth::{Users, Error};
     /// # async fn func(users: Users) -> Result<(), Error> {
     /// let mut user = users.get_by_id(4).await?;
+    /// #[cfg(feature = "ident-email")]
     /// user.set_email("new@email.com");
+    /// #[cfg(feature = "ident-username")]
+    /// user.set_username("new");
     /// user.set_password("new password");
     /// users.modify(&user).await?;
     /// # Ok(())}

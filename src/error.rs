@@ -7,6 +7,10 @@ pub enum Error {
     #[error("That is not a valid email address.")]
     InvalidEmailAddressError,
 
+    /// This error occurs when attempting to create a user with an invalid username.
+    #[error("That is not a valid username.")]
+    InvalidUsernameError,
+
     /// This error only occurs if the application panics while holding a locked mutex.
     #[cfg(feature = "sqlx-sqlite")]
     #[error("The mutex guarding the Sqlite connection was poisoned.")]
@@ -26,9 +30,15 @@ pub enum Error {
     /// This error occurs when a user tries to log in, but their account doesn't exist.
     #[error("The email \"{0}\" is not registered. Try signing up first.")]
     EmailDoesNotExist(String),
+    /// This error occurs when a user tries to log in, but their account doesn't exist.
+    #[error("The username \"{0}\" is not registered. Try signing up first.")]
+    UsernameDoesNotExist(String),
     /// This error is thrown when a user tries to sign up with an email that already exists.
     #[error("That email address already exists. Try logging in.")]
     EmailAlreadyExists,
+    /// This error is thrown when a user tries to sign up with an username that already exists.
+    #[error("That username already exists. Try logging in.")]
+    UsernameAlreadyExists,
     /// This error occurs when the user does exist, but their password was incorrect.
     #[error("Incorrect email or password")]
     UnauthorizedError,
@@ -89,6 +99,7 @@ impl Error {
     fn message(&self) -> String {
         match self {
             InvalidEmailAddressError
+            | InvalidUsernameError
             | EmailAlreadyExists
             | UnauthorizedError
             | UserNotFoundError => format!("{}", self),

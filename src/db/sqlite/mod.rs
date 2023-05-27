@@ -15,10 +15,20 @@ use rusqlite::Row;
 #[cfg(feature = "rusqlite")]
 impl<'a> TryFrom<&rusqlite::Row<'a>> for crate::User {
     type Error = rusqlite::Error;
+    #[cfg(feature = "ident-email")]
     fn try_from(row: &Row) -> Result<User, rusqlite::Error> {
         Ok(User {
             id: row.get(0)?,
             email: row.get(1)?,
+            password: row.get(2)?,
+            is_admin: row.get(3)?,
+        })
+    }
+    #[cfg(feature = "ident-username")]
+    fn try_from(row: &Row) -> Result<User, rusqlite::Error> {
+        Ok(User {
+            id: row.get(0)?,
+            username: row.get(1)?,
             password: row.get(2)?,
             is_admin: row.get(3)?,
         })
@@ -40,11 +50,21 @@ impl DBConnection for Mutex<rusqlite::Connection> {
         Ok(())
     }
 
+    #[cfg(feature = "ident-email")]
     async fn update_user(&self, user: &User) -> Result<()> {
         let conn = self.lock().await;
         conn.execute(
             UPDATE_USER,
             params![user.id, user.email, user.password, user.is_admin],
+        )?;
+        Ok(())
+    }
+    #[cfg(feature = "ident-username")]
+    async fn update_user(&self, user: &User) -> Result<()> {
+        let conn = self.lock().await;
+        conn.execute(
+            UPDATE_USER,
+            params![user.id, user.username, user.password, user.is_admin],
         )?;
         Ok(())
     }
@@ -55,9 +75,9 @@ impl DBConnection for Mutex<rusqlite::Connection> {
         Ok(())
     }
 
-    async fn delete_user_by_email(&self, email: &str) -> Result<()> {
+    async fn delete_user_by_ident(&self, ident: &str) -> Result<()> {
         let conn = self.lock().await;
-        conn.execute(REMOVE_BY_EMAIL, params![email])?;
+        conn.execute(REMOVE_BY_IDENT, params![ident])?;
         Ok(())
     }
 
@@ -71,11 +91,11 @@ impl DBConnection for Mutex<rusqlite::Connection> {
         Ok(user)
     }
 
-    async fn get_user_by_email(&self, email: &str) -> Result<User> {
+    async fn get_user_by_ident(&self, ident: &str) -> Result<User> {
         let conn = self.lock().await;
         let user = conn.query_row(
-            SELECT_BY_EMAIL, //
-            params![email],
+            SELECT_BY_IDENT, //
+            params![ident],
             |row| row.try_into(),
         )?;
         Ok(user)
@@ -103,11 +123,24 @@ impl DBConnection for Mutex<SqliteConnection> {
             .await?;
         Ok(())
     }
+    #[cfg(feature = "ident-email")]
     async fn update_user(&self, user: &User) -> Result {
         let mut db = self.lock().await;
         query(UPDATE_USER)
             .bind(user.id)
             .bind(&user.email)
+            .bind(&user.password)
+            .bind(user.is_admin)
+            .execute(&mut *db)
+            .await?;
+        Ok(())
+    }
+    #[cfg(feature = "ident-username")]
+    async fn update_user(&self, user: &User) -> Result {
+        let mut db = self.lock().await;
+        query(UPDATE_USER)
+            .bind(user.id)
+            .bind(&user.username)
             .bind(&user.password)
             .bind(user.is_admin)
             .execute(&mut *db)
@@ -121,9 +154,9 @@ impl DBConnection for Mutex<SqliteConnection> {
             .await?;
         Ok(())
     }
-    async fn delete_user_by_email(&self, email: &str) -> Result {
-        query(REMOVE_BY_EMAIL)
-            .bind(email)
+    async fn delete_user_by_ident(&self, ident: &str) -> Result {
+        query(REMOVE_BY_IDENT)
+            .bind(ident)
             .execute(&mut *self.lock().await)
             .await?;
         Ok(())
@@ -138,10 +171,10 @@ impl DBConnection for Mutex<SqliteConnection> {
 
         Ok(user)
     }
-    async fn get_user_by_email(&self, email: &str) -> Result<User> {
+    async fn get_user_by_ident(&self, ident: &str) -> Result<User> {
         let mut db = self.lock().await;
-        let user = query_as(SELECT_BY_EMAIL)
-            .bind(email)
+        let user = query_as(SELECT_BY_IDENT)
+            .bind(ident)
             .fetch_one(&mut *db)
             .await?;
         Ok(user)
@@ -165,10 +198,22 @@ impl DBConnection for SqlitePool {
             .await?;
         Ok(())
     }
+    #[cfg(feature = "ident-email")]
     async fn update_user(&self, user: &User) -> Result {
         query(UPDATE_USER)
             .bind(user.id)
             .bind(&user.email)
+            .bind(&user.password)
+            .bind(user.is_admin)
+            .execute(self)
+            .await?;
+        Ok(())
+    }
+    #[cfg(feature = "ident-username")]
+    async fn update_user(&self, user: &User) -> Result {
+        query(UPDATE_USER)
+            .bind(user.id)
+            .bind(&user.username)
             .bind(&user.password)
             .bind(user.is_admin)
             .execute(self)
@@ -182,9 +227,9 @@ impl DBConnection for SqlitePool {
             .await?;
         Ok(())
     }
-    async fn delete_user_by_email(&self, email: &str) -> Result {
-        query(REMOVE_BY_EMAIL) //
-            .bind(email)
+    async fn delete_user_by_ident(&self, ident: &str) -> Result {
+        query(REMOVE_BY_IDENT) //
+            .bind(ident)
             .execute(self)
             .await?;
         Ok(())
@@ -196,8 +241,8 @@ impl DBConnection for SqlitePool {
             .await?;
         Ok(user)
     }
-    async fn get_user_by_email(&self, email: &str) -> Result<User> {
-        let user = query_as(SELECT_BY_EMAIL).bind(email).fetch_one(self).await;
+    async fn get_user_by_ident(&self, ident: &str) -> Result<User> {
+        let user = query_as(SELECT_BY_IDENT).bind(ident).fetch_one(self).await;
         println!("user: {:?}", user);
         Ok(user?)
     }

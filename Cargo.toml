@@ -18,9 +18,12 @@ all-features = true
 
 
 [features]
+default = ["ident-email"]
 sqlx-sqlite = ["sqlx/sqlite"]
 sqlx-postgres = ["sqlx/postgres"]
 sqlx-mysql = ["sqlx/mysql"]
+ident-email = []
+ident-username = []
 
 
 [dependencies.rusqlite]

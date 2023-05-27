@@ -26,7 +26,7 @@ pub(crate) struct Authenticated {
     /// The user id as it is stored on the database.
     pub(crate) id: i32,
     /// The user email.
-    pub(crate) email: String,
+    pub(crate) ident: String,
     /// A random authentication token key.
     pub(crate) auth_key: String,
 }

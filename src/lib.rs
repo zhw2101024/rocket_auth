@@ -113,9 +113,18 @@
 //! }
 //!
 //! #[get("/special-content")]
+//! #[cfg(feature = "ident-email")]
 //! fn special_content(option: Option<User>) -> String {
 //!     if let Some(user) = option {
 //!         format!("hello, {}.", user.email())
+//!     } else {
+//!         "hello, anonymous user".into()
+//!     }
+//! }
+//! #[cfg(feature = "ident-username")]
+//! fn special_content(option: Option<User>) -> String {
+//!     if let Some(user) = option {
+//!         format!("hello, {}.", user.username())
 //!     } else {
 //!         "hello, anonymous user".into()
 //!     }
@@ -129,10 +138,19 @@
 //! # use rocket::*;
 //! # use rocket_auth::AdminUser;
 //! #[get("/admin-panel")]
+//! #[cfg(feature = "ident-email")]
 //! fn admin_panel(user: AdminUser) -> String {
 //!    format!("Hello {}.", user.email())
 //! }
+//! #[get("/admin-panel")]
+//! #[cfg(feature = "ident-username")]
+//! fn admin_panel(user: AdminUser) -> String {
+//!    format!("Hello {}.", user.username())
+//! }
 //! ```
+
+#[cfg(not(any(feature = "ident-email", feature = "ident-username",)))]
+compile_error!("one of the features ['ident-email', 'ident-username'] must be enabled");
 
 mod cookies;
 mod db;
@@ -164,10 +182,22 @@ pub use error::Error;
 /// }
 /// ```
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
+#[cfg(feature = "ident-email")]
 #[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Hash, PartialOrd, Ord)]
 pub struct User {
     pub id: i32,
     email: String,
+    pub is_admin: bool,
+    #[serde(skip_serializing)]
+    password: String,
+}
+
+#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
+#[cfg(feature = "ident-username")]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Hash, PartialOrd, Ord)]
+pub struct User {
+    pub id: i32,
+    username: String,
     pub is_admin: bool,
     #[serde(skip_serializing)]
     password: String,
@@ -179,8 +209,14 @@ pub struct User {
 /// # use rocket::*;
 /// # use rocket_auth::AdminUser;
 /// #[get("/admin-panel")]
+/// #[cfg(feature = "ident-email")]
 /// fn admin_panel(user: AdminUser) -> String {
 ///    format!("Hello {}.", user.email())
+/// }
+/// #[get("/admin-panel")]
+/// #[cfg(feature = "ident-username")]
+/// fn admin_panel(user: AdminUser) -> String {
+///    format!("Hello {}.", user.username())
 /// }
 /// ```
 #[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Hash, PartialOrd, Ord)]

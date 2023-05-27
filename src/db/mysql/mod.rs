@@ -12,9 +12,9 @@ impl DBConnection for MySqlPool {
         query(CREATE_TABLE).execute(self).await?;
         Ok(())
     }
-    async fn create_user(&self, email: &str, hash: &str, is_admin: bool) -> Result {
+    async fn create_user(&self, ident: &str, hash: &str, is_admin: bool) -> Result {
         query(INSERT_USER)
-            .bind(email)
+            .bind(ident)
             .bind(hash)
             .bind(is_admin)
             .execute(self)
@@ -22,8 +22,12 @@ impl DBConnection for MySqlPool {
         Ok(())
     }
     async fn update_user(&self, user: &User) -> Result {
+        #[cfg(feature = "ident-email")]
+        let ident = &user.email;
+        #[cfg(feature = "ident-username")]
+        let ident = &user.username;
         query(UPDATE_USER)
-            .bind(&user.email)
+            .bind(ident)
             .bind(&user.password)
             .bind(user.is_admin)
             .bind(user.id)
@@ -36,8 +40,8 @@ impl DBConnection for MySqlPool {
         query(REMOVE_BY_ID).bind(user_id).execute(self).await?;
         Ok(())
     }
-    async fn delete_user_by_email(&self, email: &str) -> Result {
-        query(REMOVE_BY_EMAIL).bind(email).execute(self).await?;
+    async fn delete_user_by_ident(&self, ident: &str) -> Result {
+        query(REMOVE_BY_IDENT).bind(ident).execute(self).await?;
         Ok(())
     }
     async fn get_user_by_id(&self, user_id: i32) -> Result<User> {
@@ -45,9 +49,9 @@ impl DBConnection for MySqlPool {
 
         Ok(user)
     }
-    async fn get_user_by_email(&self, email: &str) -> Result<User> {
-        let user = query_as(SELECT_BY_EMAIL)
-            .bind(email)
+    async fn get_user_by_ident(&self, ident: &str) -> Result<User> {
+        let user = query_as(SELECT_BY_IDENT)
+            .bind(ident)
             .fetch_one(self)
             .await?;
         Ok(user)

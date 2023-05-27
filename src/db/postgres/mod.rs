@@ -21,6 +21,7 @@ impl DBConnection for PgPool {
             .await?;
         Ok(())
     }
+    #[cfg(feature = "ident-email")]
     async fn update_user(&self, user: &User) -> Result {
         query(UPDATE_USER)
             .bind(user.id)
@@ -32,12 +33,24 @@ impl DBConnection for PgPool {
 
         Ok(())
     }
+    #[cfg(feature = "ident-username")]
+    async fn update_user(&self, user: &User) -> Result {
+        query(UPDATE_USER)
+            .bind(user.id)
+            .bind(&user.username)
+            .bind(&user.password)
+            .bind(user.is_admin)
+            .execute(self)
+            .await?;
+
+        Ok(())
+    }
     async fn delete_user_by_id(&self, user_id: i32) -> Result {
         query(REMOVE_BY_ID).bind(user_id).execute(self).await?;
         Ok(())
     }
-    async fn delete_user_by_email(&self, email: &str) -> Result {
-        query(REMOVE_BY_EMAIL).bind(email).execute(self).await?;
+    async fn delete_user_by_ident(&self, ident: &str) -> Result {
+        query(REMOVE_BY_IDENT).bind(ident).execute(self).await?;
         Ok(())
     }
     async fn get_user_by_id(&self, user_id: i32) -> Result<User> {
@@ -45,9 +58,9 @@ impl DBConnection for PgPool {
 
         Ok(user)
     }
-    async fn get_user_by_email(&self, email: &str) -> Result<User> {
-        let user = query_as(SELECT_BY_EMAIL)
-            .bind(email)
+    async fn get_user_by_ident(&self, ident: &str) -> Result<User> {
+        let user = query_as(SELECT_BY_IDENT)
+            .bind(ident)
             .fetch_one(self)
             .await?;
         Ok(user)

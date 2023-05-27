@@ -89,12 +89,31 @@ impl<'a> Auth<'a> {
     /// }
     /// ```
     #[throws(Error)]
+    #[cfg(feature = "ident-email")]
     pub async fn login(&self, form: &Login) {
         let key = self.users.login(form).await?;
-        let user = self.users.get_by_email(&form.email.to_lowercase()).await?;
+        let user = self.users.get_by_ident(&form.email.to_lowercase()).await?;
         let session = Session::Authenticated(cookies::Authenticated {
             id: user.id,
-            email: user.email,
+            ident: user.email,
+            auth_key: key,
+            timestamp: now(),
+        });
+        let to_str = format!("{}", json!(session));
+        self.cookies.add_private(Cookie::new("rocket_auth", to_str));
+    }
+
+    #[throws(Error)]
+    #[cfg(feature = "ident-username")]
+    pub async fn login(&self, form: &Login) {
+        let key = self.users.login(form).await?;
+        let user = self
+            .users
+            .get_by_ident(&form.username.to_lowercase())
+            .await?;
+        let session = Session::Authenticated(cookies::Authenticated {
+            id: user.id,
+            ident: user.username,
             auth_key: key,
             timestamp: now(),
         });
@@ -114,13 +133,34 @@ impl<'a> Auth<'a> {
     /// }
     /// ```
     #[throws(Error)]
+    #[cfg(feature = "ident-email")]
     pub async fn login_for(&self, form: &Login, time: Duration) {
         let key = self.users.login_for(form, time).await?;
-        let user = self.users.get_by_email(&form.email.to_lowercase()).await?;
+        let user = self.users.get_by_ident(&form.email.to_lowercase()).await?;
 
         let session = Session::Authenticated(Authenticated {
             id: user.id,
-            email: user.email,
+            ident: user.email,
+            auth_key: key,
+            timestamp: now(),
+        });
+        let to_str = format!("{}", json!(session));
+        let cookie = Cookie::new("rocket_auth", to_str);
+        self.cookies.add_private(cookie);
+    }
+
+    #[throws(Error)]
+    #[cfg(feature = "ident-username")]
+    pub async fn login_for(&self, form: &Login, time: Duration) {
+        let key = self.users.login_for(form, time).await?;
+        let user = self
+            .users
+            .get_by_ident(&form.username.to_lowercase())
+            .await?;
+
+        let session = Session::Authenticated(Authenticated {
+            id: user.id,
+            ident: user.username,
             auth_key: key,
             timestamp: now(),
         });
@@ -276,6 +316,7 @@ impl<'a> Auth<'a> {
     /// }
     /// ```
     #[throws(Error)]
+    #[cfg(feature = "ident-email")]
     pub async fn change_email(&self, email: String) {
         if self.is_auth().await {
             if !validator::validate_email(&email) {
@@ -284,6 +325,32 @@ impl<'a> Auth<'a> {
             let session = self.get_session()?;
             let mut user = self.users.get_by_id(session.id()?).await?;
             user.email = email.to_lowercase();
+            self.users.modify(&user).await?;
+        } else {
+            throw!(Error::UnauthorizedError)
+        }
+    }
+
+    /// Changes the username of the currently authenticated user
+    /// ```
+    /// # use rocket::post;
+    /// # use rocket_auth::{Auth, Result};
+    /// #[post("/user/change-username", data="<new_username>")]
+    /// async fn change_username(new_username: String, auth: Auth<'_>) -> Result {
+    ///     auth.change_username(new_username).await?;
+    ///     Ok(())
+    /// }
+    /// ```
+    #[throws(Error)]
+    #[cfg(feature = "ident-username")]
+    pub async fn change_username(&self, username: String) {
+        if self.is_auth().await {
+            if !validator::validate_length(&username, Some(3), Some(8), Some(8)) {
+                throw!(Error::InvalidUsernameError)
+            }
+            let session = self.get_session()?;
+            let mut user = self.users.get_by_id(session.id()?).await?;
+            user.username = username.to_lowercase();
             self.users.modify(&user).await?;
         } else {
             throw!(Error::UnauthorizedError)
