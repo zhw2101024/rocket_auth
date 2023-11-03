@@ -139,13 +139,13 @@ impl<'r> FromRequest<'r> for User {
         let guard = request.guard().await;
         let auth: Auth = match guard {
             Success(auth) => auth,
-            Failure(x) => return Failure(x),
+            Error(x) => return Error(x),
             Forward(x) => return Forward(x),
         };
         if let Some(user) = auth.get_user().await {
             Outcome::Success(user)
         } else {
-            Outcome::Failure((Status::Unauthorized, Error::UnauthorizedError))
+            Outcome::Error((Status::Unauthorized, Self::Error::UnauthorizedError))
         }
     }
 }
@@ -158,7 +158,7 @@ impl<'r> FromRequest<'r> for AdminUser {
         let guard = request.guard().await;
         let auth: Auth = match guard {
             Success(auth) => auth,
-            Failure(x) => return Failure(x),
+            Error(x) => return Error(x),
             Forward(x) => return Forward(x),
         };
         if let Some(user) = auth.get_user().await {
@@ -166,7 +166,7 @@ impl<'r> FromRequest<'r> for AdminUser {
                 return Outcome::Success(AdminUser(user));
             }
         }
-        Outcome::Failure((Status::Unauthorized, Error::UnauthorizedError))
+        Outcome::Error((Status::Unauthorized, Self::Error::UnauthorizedError))
     }
 }
 
