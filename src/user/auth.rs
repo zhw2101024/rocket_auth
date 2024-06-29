@@ -262,7 +262,7 @@ impl<'a> Auth<'a> {
     pub async fn logout(&self) {
         let session = self.get_session()?;
         self.users.logout(session).await?;
-        self.cookies.remove_private(Cookie::named("rocket_auth"));
+        self.cookies.remove_private(Cookie::from("rocket_auth"));
     }
     /// Deletes the account of the currently authenticated user.
     /// ```rust
@@ -278,7 +278,7 @@ impl<'a> Auth<'a> {
         if self.is_auth().await {
             let session = self.get_session()?;
             self.users.delete(session.id()?).await?;
-            self.cookies.remove_private(Cookie::named("rocket_auth"));
+            self.cookies.remove_private(Cookie::from("rocket_auth"));
         } else {
             throw!(Error::UnauthenticatedError)
         }
